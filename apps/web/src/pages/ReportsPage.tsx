@@ -224,7 +224,7 @@ export const ReportsPage: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-4 py-3 font-semibold text-gray-900">
-                        {u.grossWage !== undefined ? `${u.grossWage.toFixed(2)} €` : '–'}
+                        {u.grossWageCents !== undefined ? `${(u.grossWageCents / 100).toFixed(2)} €` : '–'}
                       </td>
                     </tr>
 

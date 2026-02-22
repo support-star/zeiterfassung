@@ -2,18 +2,19 @@
 set -e
 
 APP_DIR="/opt/zeiterfassung"
+cd "$APP_DIR"
 
-# .env laden
+# .env laden (ohne Zeilen mit Sonderzeichen wie <>)
 if [ -f "$APP_DIR/.env" ]; then
-  export $(grep -v '^#' "$APP_DIR/.env" | xargs)
+  export $(grep -v '^#' "$APP_DIR/.env" | grep -v '<' | grep -v '>' | xargs)
+  # DOMAIN separat laden
+  DOMAIN=$(grep '^DOMAIN=' "$APP_DIR/.env" | cut -d'=' -f2)
 fi
 
 DOMAIN="${DOMAIN:-zeit.kurtech.shop}"
 
 echo "🚀 Zeiterfassung Deployment startet..."
 echo "Domain: $DOMAIN"
-
-cd "$APP_DIR"
 
 # Repo updaten
 echo "📥 Repository updaten..."
@@ -24,14 +25,12 @@ echo "🔧 Nginx für Domain $DOMAIN konfigurieren..."
 sed -i "s/DEINE_DOMAIN\.de/$DOMAIN/g" docker/nginx/nginx.conf 2>/dev/null || true
 
 # SSL Zertifikat holen (einmalig)
-if [ ! -d "docker/certbot/conf/live/$DOMAIN" ]; then
+if [ ! -d "$APP_DIR/docker/certbot/conf/live/$DOMAIN" ]; then
   echo "🔒 SSL Zertifikat anfordern..."
   mkdir -p docker/certbot/conf docker/certbot/www
 
-  # Temporär nur HTTP-Nginx starten
   docker compose --env-file "$APP_DIR/.env" -f docker/docker-compose.prod.yml up -d nginx
-
-  sleep 3
+  sleep 5
 
   docker compose --env-file "$APP_DIR/.env" -f docker/docker-compose.prod.yml run --rm certbot certonly \
     --webroot \
@@ -39,14 +38,12 @@ if [ ! -d "docker/certbot/conf/live/$DOMAIN" ]; then
     --email "admin@$DOMAIN" \
     --agree-tos \
     --no-eff-email \
-    -d "$DOMAIN"
-
-  echo "✅ SSL Zertifikat erhalten!"
+    -d "$DOMAIN" || echo "⚠️  SSL übersprungen - DNS noch nicht bereit?"
 fi
 
-# App bauen und starten
+# App bauen (Cache leeren wegen vorheriger Fehler)
 echo "🏗️  Docker Images bauen..."
-docker compose --env-file "$APP_DIR/.env" -f docker/docker-compose.prod.yml build
+docker compose --env-file "$APP_DIR/.env" -f docker/docker-compose.prod.yml build --no-cache
 
 echo "🔄 Container starten..."
 docker compose --env-file "$APP_DIR/.env" -f docker/docker-compose.prod.yml up -d
@@ -58,5 +55,4 @@ echo ""
 echo "✅ Deployment abgeschlossen!"
 echo "🌐 App: https://$DOMAIN"
 echo ""
-echo "Status der Container:"
 docker compose --env-file "$APP_DIR/.env" -f docker/docker-compose.prod.yml ps
