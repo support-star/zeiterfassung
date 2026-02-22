@@ -1,0 +1,36 @@
+FROM node:20-alpine AS base
+WORKDIR /app
+
+# Install deps
+FROM base AS deps
+COPY package.json package-lock.json* ./
+COPY apps/api/package.json apps/api/
+COPY packages/shared/package.json packages/shared/
+RUN npm ci --workspace=apps/api --workspace=packages/shared --include-workspace-root
+
+# Build shared
+FROM deps AS shared-build
+COPY packages/shared/ packages/shared/
+RUN npm run shared:build
+
+# Generate Prisma + build API
+FROM shared-build AS api-build
+COPY apps/api/ apps/api/
+RUN npx --workspace=apps/api prisma generate
+RUN npm run api:build
+
+# Production
+FROM base AS runner
+ENV NODE_ENV=production
+
+COPY --from=api-build /app/node_modules ./node_modules
+COPY --from=api-build /app/packages/shared/dist ./packages/shared/dist
+COPY --from=api-build /app/packages/shared/package.json ./packages/shared/package.json
+COPY --from=api-build /app/apps/api/dist ./apps/api/dist
+COPY --from=api-build /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=api-build /app/apps/api/prisma ./apps/api/prisma
+COPY --from=api-build /app/apps/api/package.json ./apps/api/package.json
+
+EXPOSE 3000
+
+CMD ["sh", "-c", "cd apps/api && npx prisma migrate deploy && node dist/main.js"]

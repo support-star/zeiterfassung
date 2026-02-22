@@ -1,0 +1,31 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+
+# Prisma
+apps/api/prisma/migrations/
+
+# Build
+apps/web/dist/
+apps/api/dist/
+packages/shared/dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Capacitor
+apps/mobile/android/
+apps/mobile/ios/
+
+# Docker
+docker/pgdata/
+mock-api.ts

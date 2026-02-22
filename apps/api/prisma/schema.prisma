@@ -1,0 +1,226 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  DISPO
+  WORKER
+}
+
+enum DevicePlatform {
+  WEB
+  ANDROID
+  IOS
+}
+
+enum EntryType {
+  WORK
+  TRAVEL
+  INTERNAL
+}
+
+enum EntryStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  LOCKED
+}
+
+enum BreakType {
+  DEFAULT
+  LEGAL
+  SHORT
+  OTHER
+}
+
+enum CreatedVia {
+  WEB
+  MOBILE
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  SUBMIT
+  APPROVE
+  REJECT
+  REOPEN
+  REVOKE_DEVICE
+}
+
+// ── Users ─────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  firstName    String   @map("first_name")
+  lastName     String   @map("last_name")
+  role         UserRole @default(WORKER)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  devices       Device[]
+  timeEntries   TimeEntry[]
+  refreshTokens RefreshToken[]
+  pairingTokens PairingToken[]
+  auditLogs     AuditLog[]     @relation("AuditActor")
+
+  @@map("users")
+}
+
+// ── Devices ───────────────────────────────────────────
+
+model Device {
+  id         String         @id @default(uuid()) @db.Uuid
+  userId     String         @map("user_id") @db.Uuid
+  deviceName String         @map("device_name")
+  platform   DevicePlatform
+  lastSeenAt DateTime       @default(now()) @map("last_seen_at")
+  revokedAt  DateTime?      @map("revoked_at")
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  user          User           @relation(fields: [userId], references: [id])
+  refreshTokens RefreshToken[]
+
+  @@map("devices")
+}
+
+// ── Auth tokens ───────────────────────────────────────
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  deviceId  String?   @map("device_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user   User    @relation(fields: [userId], references: [id])
+  device Device? @relation(fields: [deviceId], references: [id])
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model PairingToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  token     String    @unique
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([token])
+  @@map("pairing_tokens")
+}
+
+// ── Customers & Projects ──────────────────────────────
+
+model Customer {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  addressLine1 String?  @map("address_line1")
+  zip          String?
+  city         String?
+  contactName  String?  @map("contact_name")
+  contactPhone String?  @map("contact_phone")
+  contactEmail String?  @map("contact_email")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  projects    Project[]
+  timeEntries TimeEntry[]
+
+  @@map("customers")
+}
+
+model Project {
+  id               String   @id @default(uuid()) @db.Uuid
+  customerId       String   @map("customer_id") @db.Uuid
+  name             String
+  siteAddressLine1 String?  @map("site_address_line1")
+  siteZip          String?  @map("site_zip")
+  siteCity         String?  @map("site_city")
+  costCenter       String?  @map("cost_center")
+  hourlyRateCents  Int?     @map("hourly_rate_cents")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  customer    Customer    @relation(fields: [customerId], references: [id])
+  timeEntries TimeEntry[]
+
+  @@map("projects")
+}
+
+// ── Time Tracking ─────────────────────────────────────
+
+model TimeEntry {
+  id         String      @id @default(uuid()) @db.Uuid
+  userId     String      @map("user_id") @db.Uuid
+  customerId String?     @map("customer_id") @db.Uuid
+  projectId  String?     @map("project_id") @db.Uuid
+  entryType  EntryType   @default(WORK) @map("entry_type")
+  startAt    DateTime    @map("start_at") @db.Timestamptz
+  endAt      DateTime?   @map("end_at") @db.Timestamptz
+  status     EntryStatus @default(DRAFT)
+  rapport    String?
+  createdVia CreatedVia  @map("created_via")
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
+  user     User        @relation(fields: [userId], references: [id])
+  customer Customer?   @relation(fields: [customerId], references: [id])
+  project  Project?    @relation(fields: [projectId], references: [id])
+  breaks   BreakEntry[]
+
+  @@index([userId, startAt])
+  @@index([userId, endAt])
+  @@index([status])
+  @@map("time_entries")
+}
+
+model BreakEntry {
+  id          String    @id @default(uuid()) @db.Uuid
+  timeEntryId String    @map("time_entry_id") @db.Uuid
+  breakType   BreakType @default(DEFAULT) @map("break_type")
+  startAt     DateTime  @map("start_at") @db.Timestamptz
+  endAt       DateTime? @map("end_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  timeEntry TimeEntry @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
+
+  @@map("break_entries")
+}
+
+// ── Audit ─────────────────────────────────────────────
+
+model AuditLog {
+  id          String      @id @default(uuid()) @db.Uuid
+  entityType  String      @map("entity_type")
+  entityId    String      @map("entity_id") @db.Uuid
+  action      AuditAction
+  actorUserId String      @map("actor_user_id") @db.Uuid
+  payloadJson Json?       @map("payload_json") @db.JsonB
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  actor User @relation("AuditActor", fields: [actorUserId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([actorUserId])
+  @@map("audit_logs")
+}
