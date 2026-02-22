@@ -1,7 +1,19 @@
 import React, { useState, useEffect } from 'react';
 
+interface DailyEntry {
+  date: string;
+  weekday: string;
+  startTime: string | null;
+  endTime: string | null;
+  breakMinutes: number;
+  netMinutes: number;
+  status: string;
+  entryType: string;
+  rapport?: string;
+}
+
 interface MonthlyReport {
-  user: { id: string; firstName: string; lastName: string; email: string; hourlyRate?: number };
+  user: { id: string; firstName: string; lastName: string; email: string; hourlyRateCents?: number };
   period: string;
   month: number;
   year: number;
@@ -11,7 +23,8 @@ interface MonthlyReport {
   totalBreakMinutes: number;
   overtimeMinutes: number;
   targetMinutes: number;
-  grossWage?: number;
+  grossWageCents?: number;
+  entries: DailyEntry[];
   statusSummary: { DRAFT: number; SUBMITTED: number; APPROVED: number; LOCKED: number };
 }
 
