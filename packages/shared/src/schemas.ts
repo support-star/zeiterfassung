@@ -139,3 +139,24 @@ export const ExportQueryDto = z.object({
   month: z.coerce.number().int().min(1).max(12),
 });
 export type ExportQueryDto = z.infer<typeof ExportQueryDto>;
+
+// ── GPS / Location Tracking ───────────────────────────
+export const LogLocationDto = z.object({
+  lat:         z.number().min(-90).max(90),
+  lng:         z.number().min(-180).max(180),
+  accuracy:    z.number().min(0).optional(),
+  altitude:    z.number().optional(),
+  speed:       z.number().min(0).optional(),
+  capturedAt:  z.string().datetime().optional(), // ISO, default: now
+  timeEntryId: z.string().uuid().optional(),
+});
+export type LogLocationDto = z.infer<typeof LogLocationDto>;
+
+export const LocationQueryDto = z.object({
+  userId:      z.string().uuid().optional(),
+  timeEntryId: z.string().uuid().optional(),
+  from:        z.string().datetime().optional(),
+  to:          z.string().datetime().optional(),
+  limit:       z.coerce.number().int().min(1).max(1000).default(200),
+});
+export type LocationQueryDto = z.infer<typeof LocationQueryDto>;

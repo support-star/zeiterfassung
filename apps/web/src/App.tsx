@@ -12,6 +12,8 @@ import CustomersPage from '@/pages/CustomersPage';
 import ProjectsPage from '@/pages/ProjectsPage';
 import UsersPage from '@/pages/UsersPage';
 import DevicesPage from '@/pages/DevicesPage';
+import LocationsPage from '@/pages/LocationsPage';
+import ReportsPage from '@/pages/ReportsPage';
 
 // Mobile
 import MobileLoginPage from '@/pages/mobile/MobileLoginPage';
@@ -145,6 +147,14 @@ function AppRoutes() {
           element={<RequireAuth roles={['ADMIN']}><UsersPage /></RequireAuth>}
         />
         <Route path="/devices" element={<DevicesPage />} />
+        <Route
+          path="/locations"
+          element={<RequireAuth roles={['ADMIN', 'DISPO']}><LocationsPage /></RequireAuth>}
+        />
+        <Route
+          path="/reports"
+          element={<RequireAuth roles={['ADMIN', 'DISPO']}><ReportsPage /></RequireAuth>}
+        />
       </Route>
 
       {/* ── Fallback ───────────────────────────── */}

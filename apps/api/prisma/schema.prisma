@@ -76,6 +76,7 @@ model User {
   pairingTokens PairingToken[]
   auditLogs     AuditLog[]     @relation("AuditActor")
   notifications Notification[]
+  locationLogs  LocationLog[]
 
   @@map("users")
 }
@@ -208,6 +209,7 @@ model TimeEntry {
   customer Customer?   @relation(fields: [customerId], references: [id])
   project  Project?    @relation(fields: [projectId], references: [id])
   breaks   BreakEntry[]
+  locationLogs LocationLog[]
 
   @@index([userId, startAt])
   @@index([userId, endAt])
@@ -245,4 +247,26 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([actorUserId])
   @@map("audit_logs")
+}
+
+// ── GPS Location Tracking ─────────────────────────────
+
+model LocationLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  timeEntryId String?  @map("time_entry_id") @db.Uuid
+  lat         Float
+  lng         Float
+  accuracy    Float?                   // Genauigkeit in Metern
+  altitude    Float?                   // Höhe über NN
+  speed       Float?                   // Geschwindigkeit m/s
+  capturedAt  DateTime @map("captured_at") @db.Timestamptz
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeEntry TimeEntry? @relation(fields: [timeEntryId], references: [id], onDelete: SetNull)
+
+  @@index([userId, capturedAt])
+  @@index([timeEntryId, capturedAt])
+  @@map("location_logs")
 }

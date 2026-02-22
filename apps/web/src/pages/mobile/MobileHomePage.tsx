@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/stores/auth';
 import { useOffline, type LocalTimerState } from '@/lib/offline-queue';
 import { useQuery } from '@/hooks/useQuery';
+import { useGpsTracker } from '@/hooks/useGpsTracker';
 import { api } from '@/lib/api';
 import { formatLiveTimer, typeLabel } from '@/lib/format';
 import {
@@ -72,6 +73,9 @@ export default function MobileHomePage() {
   // Stammdaten
   const { data: customers } = useQuery<Customer[]>('/customers');
   const { data: allProjects } = useQuery<Project[]>('/projects');
+
+  // GPS Tracking — sendet Standort alle 10 Min auf Mobile
+  useGpsTracker({ activeTimeEntryId: timer.isRunning && timer.entryId ? timer.entryId : null });
 
   // Formular-State (Zustand A)
   const [selectedType, setSelectedType] = useState('WORK');

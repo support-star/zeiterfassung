@@ -12,15 +12,20 @@ import {
   Menu,
   X,
   Smartphone,
+  MapPin,
+  BarChart2,
   ChevronRight,
 } from 'lucide-react';
 import clsx from 'clsx';
+import { NotificationBell } from '@/components/NotificationBell';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'DISPO'] },
   { path: '/time-entries', label: 'Zeiterfassung', icon: Clock, roles: ['ADMIN', 'DISPO', 'WORKER'] },
   { path: '/customers', label: 'Kunden', icon: Building2, roles: ['ADMIN', 'DISPO'] },
   { path: '/projects', label: 'Projekte', icon: FolderKanban, roles: ['ADMIN', 'DISPO'] },
+  { path: '/locations', label: 'GPS-Tracking', icon: MapPin, roles: ['ADMIN', 'DISPO'] },
+  { path: '/reports', label: 'Reports', icon: BarChart2, roles: ['ADMIN', 'DISPO'] },
   { path: '/users', label: 'Mitarbeiter', icon: Users, roles: ['ADMIN'] },
   { path: '/devices', label: 'Geräte', icon: Smartphone, roles: ['ADMIN', 'DISPO', 'WORKER'] },
 ];
@@ -119,7 +124,8 @@ export default function AppLayout() {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <span className="font-semibold text-surface-800">Zeiterfassung</span>
+          <span className="font-semibold text-surface-800 flex-1">Zeiterfassung</span>
+          <NotificationBell />
         </header>
 
         {/* Page Content */}

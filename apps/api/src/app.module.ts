@@ -10,6 +10,7 @@ import { CustomersModule } from './customers/customers.module';
 import { ProjectsModule } from './projects/projects.module';
 import { TimeEntriesModule } from './time-entries/time-entries.module';
 import { ExportModule } from './export/export.module';
+import { LocationsModule } from './locations/locations.module';
 import { ReportsModule } from './reports/reports.module';
 import { MailModule } from './mail/mail.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -32,6 +33,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     NotificationsModule,
     ReportsModule,
     ExportModule,
+    LocationsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

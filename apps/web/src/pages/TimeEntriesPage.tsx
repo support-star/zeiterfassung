@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { useAuth } from '@/stores/auth';
 import { useQuery, useMutation } from '@/hooks/useQuery';
 import { api } from '@/lib/api';
+import { useGpsTracker } from '@/hooks/useGpsTracker';
 import {
   formatTime,
   formatDate,
@@ -71,6 +72,12 @@ export default function TimeEntriesPage() {
   const { user } = useAuth();
   const isWorker = user?.role === 'WORKER';
   const canManage = user?.role === 'ADMIN' || user?.role === 'DISPO';
+
+  // GPS Tracking — sendet Standort alle 10 Min wenn ein Entry läuft
+  const runningEntry = entries?.find(e => !e.endAt && e.userId === user?.id) ?? null;
+  useGpsTracker({
+    activeTimeEntryId: runningEntry?.id ?? null,
+  });
 
   // Filter-State
   const [from, setFrom] = useState(() => {
