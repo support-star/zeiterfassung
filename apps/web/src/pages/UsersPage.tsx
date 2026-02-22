@@ -36,31 +36,38 @@ export default function UsersPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (editId) {
-      const body: any = {
-        email: form.email,
-        firstName: form.firstName,
-        lastName: form.lastName,
-        role: form.role,
-      };
-      await mutate('PATCH', `/users/${editId}`, body);
-    } else {
-      await mutate('POST', '/users', {
-        email: form.email,
-        password: form.password,
-        firstName: form.firstName,
-        lastName: form.lastName,
-        role: form.role,
-      });
+    try {
+      if (editId) {
+        await mutate('PATCH', `/users/${editId}`, {
+          email: form.email,
+          firstName: form.firstName,
+          lastName: form.lastName,
+          role: form.role,
+        });
+      } else {
+        await mutate('POST', '/users', {
+          email: form.email,
+          password: form.password,
+          firstName: form.firstName,
+          lastName: form.lastName,
+          role: form.role,
+        });
+      }
+      setShowForm(false);
+      refetch();
+    } catch {
+      // Fehler wird durch useMutation().error angezeigt - Form bleibt offen
     }
-    setShowForm(false);
-    refetch();
   };
 
   const handleDeactivate = async (id: string) => {
     if (!confirm('Mitarbeiter wirklich deaktivieren?')) return;
-    await mutate('POST', `/users/${id}/deactivate`, {});
-    refetch();
+    try {
+      await mutate('POST', `/users/${id}/deactivate`, {});
+      refetch();
+    } catch {
+      // Fehler wird angezeigt
+    }
   };
 
   const set = (field: string) => (e: any) => setForm({ ...form, [field]: e.target.value });
@@ -83,7 +90,11 @@ export default function UsersPage() {
             <h3 className="text-sm font-semibold">{editId ? 'Mitarbeiter bearbeiten' : 'Neuer Mitarbeiter'}</h3>
             <button type="button" onClick={() => setShowForm(false)} className="btn-ghost btn-sm"><X className="h-4 w-4" /></button>
           </div>
-          {error && <p className="text-sm text-danger-500">{error}</p>}
+          {error && (
+            <div className="rounded-lg bg-danger-50 border border-danger-200 px-3 py-2 text-sm text-danger-700">
+              {error}
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <div><label className="label">Vorname *</label><input value={form.firstName} onChange={set('firstName')} className="input" required /></div>
             <div><label className="label">Nachname *</label><input value={form.lastName} onChange={set('lastName')} className="input" required /></div>
@@ -112,6 +123,8 @@ export default function UsersPage() {
       <div className="card overflow-hidden">
         {isLoading ? (
           <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-brand-600" /></div>
+        ) : !users?.length ? (
+          <div className="py-20 text-center text-sm text-surface-400">Keine Mitarbeiter vorhanden</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

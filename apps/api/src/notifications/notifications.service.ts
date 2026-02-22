@@ -164,7 +164,8 @@ export class NotificationsService {
 
   // In-App Notifications
   async getUnreadCount(userId: string) {
-    return this.prisma.notification.count({ where: { userId, read: false } });
+    const count = await this.prisma.notification.count({ where: { userId, read: false } });
+    return { count };
   }
 
   async getNotifications(userId: string, limit = 20) {

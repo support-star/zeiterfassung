@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/stores/auth';
 import { useQuery } from '@/hooks/useQuery';
-import { formatTime, formatLiveTimer, typeLabel, statusLabel } from '@/lib/format';
-import { Clock, CheckCircle, AlertTriangle, Users, Loader2, Play } from 'lucide-react';
+import { formatTime, formatLiveTimer, typeLabel } from '@/lib/format';
+import { Clock, CheckCircle, AlertTriangle, Play, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
 
 interface TimeEntry {
@@ -26,17 +27,7 @@ function LiveTimer({ startAt }: { startAt: string }) {
   return <span className="font-mono text-lg font-bold text-brand-600">{time}</span>;
 }
 
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  color,
-}: {
-  label: string;
-  value: number;
-  icon: any;
-  color: string;
-}) {
+function StatCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: any; color: string }) {
   return (
     <div className="card p-5">
       <div className="flex items-center gap-3">
@@ -53,10 +44,25 @@ function StatCard({
 }
 
 export default function DashboardPage() {
-  const { data: running, isLoading: loadingRunning } = useQuery<TimeEntry[]>('/time-entries/running');
-  const { data: submitted, isLoading: loadingSub } = useQuery<TimeEntry[]>('/time-entries/submitted');
+  const { user } = useAuth();
+  const canManage = user?.role === 'ADMIN' || user?.role === 'DISPO';
 
-  const isLoading = loadingRunning || loadingSub;
+  // Nur ADMIN/DISPO sehen running & submitted
+  const { data: running, isLoading: loadingRunning } = useQuery<TimeEntry[]>(
+    canManage ? '/time-entries/running' : null,
+  );
+  const { data: submitted, isLoading: loadingSub } = useQuery<TimeEntry[]>(
+    canManage ? '/time-entries/submitted' : null,
+  );
+
+  // Worker sehen eigene laufende Einträge über normalen Endpunkt
+  const now = new Date();
+  const todayFrom = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const { data: myEntries, isLoading: loadingMy } = useQuery<TimeEntry[]>(
+    !canManage ? `/time-entries?from=${todayFrom}` : null,
+  );
+
+  const isLoading = loadingRunning || loadingSub || loadingMy;
 
   // Warnungen: Einträge > 10h oder ohne Pause > 6h
   const warnings: { entry: TimeEntry; reason: string }[] = [];
@@ -72,9 +78,53 @@ export default function DashboardPage() {
     }
   }
 
+  // Worker Dashboard
+  if (!canManage) {
+    const myRunning = myEntries?.filter(e => !e.endAt) || [];
+    const myToday = myEntries?.length || 0;
+    return (
+      <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-sm text-surface-500 mt-1">Willkommen, {user?.firstName}!</p>
+        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-brand-600" /></div>
+        ) : (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <StatCard label="Aktive Erfassung" value={myRunning.length} icon={Play} color="bg-brand-600" />
+              <StatCard label="Einträge heute" value={myToday} icon={Clock} color="bg-success-500" />
+            </div>
+            {myRunning.length > 0 && (
+              <div className="card">
+                <div className="px-5 py-4 border-b flex items-center gap-2">
+                  <Play className="h-4 w-4 text-brand-600" />
+                  <h2 className="text-sm font-semibold">Läuft gerade</h2>
+                </div>
+                {myRunning.map((entry) => (
+                  <div key={entry.id} className="px-5 py-3.5 flex items-center gap-4">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{entry.customer?.name || 'Kein Kunde'}</p>
+                      <p className="text-xs text-surface-500">{entry.project?.name || typeLabel(entry.entryType)}</p>
+                    </div>
+                    <div className="text-right">
+                      <LiveTimer startAt={entry.startAt} />
+                      <p className="text-xs text-surface-400">seit {formatTime(entry.startAt)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // Admin/Dispo Dashboard
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <p className="text-sm text-surface-500 mt-1">Übersicht der aktuellen Zeiterfassung</p>
@@ -86,35 +136,17 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
-          {/* Statistiken */}
           <div className="grid gap-4 sm:grid-cols-3">
-            <StatCard
-              label="Aktive Erfassungen"
-              value={running?.length || 0}
-              icon={Play}
-              color="bg-brand-600"
-            />
-            <StatCard
-              label="Zur Prüfung"
-              value={submitted?.length || 0}
-              icon={CheckCircle}
-              color="bg-warning-500"
-            />
-            <StatCard
-              label="Warnungen"
-              value={warnings.length}
-              icon={AlertTriangle}
-              color={warnings.length > 0 ? 'bg-danger-500' : 'bg-surface-400'}
-            />
+            <StatCard label="Aktive Erfassungen" value={running?.length || 0} icon={Play} color="bg-brand-600" />
+            <StatCard label="Zur Prüfung" value={submitted?.length || 0} icon={CheckCircle} color="bg-warning-500" />
+            <StatCard label="Warnungen" value={warnings.length} icon={AlertTriangle} color={warnings.length > 0 ? 'bg-danger-500' : 'bg-surface-400'} />
           </div>
 
-          {/* Warnungen */}
           {warnings.length > 0 && (
             <div className="card border-warning-500/30 bg-warning-500/5">
               <div className="px-5 py-3 border-b border-warning-500/20">
                 <h2 className="text-sm font-semibold flex items-center gap-2 text-warning-600">
-                  <AlertTriangle className="h-4 w-4" />
-                  Warnungen
+                  <AlertTriangle className="h-4 w-4" /> Warnungen
                 </h2>
               </div>
               <div className="divide-y divide-warning-500/10">
@@ -131,19 +163,15 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Laufende Einträge */}
           <div className="card">
             <div className="px-5 py-4 border-b flex items-center justify-between">
               <h2 className="text-sm font-semibold flex items-center gap-2">
-                <Play className="h-4 w-4 text-brand-600" />
-                Läuft gerade
+                <Play className="h-4 w-4 text-brand-600" /> Läuft gerade
               </h2>
               <span className="badge badge-submitted">{running?.length || 0}</span>
             </div>
             {!running?.length ? (
-              <div className="px-5 py-10 text-center text-sm text-surface-400">
-                Keine aktiven Erfassungen
-              </div>
+              <div className="px-5 py-10 text-center text-sm text-surface-400">Keine aktiven Erfassungen</div>
             ) : (
               <div className="divide-y">
                 {running.map((entry) => (
@@ -152,17 +180,13 @@ export default function DashboardPage() {
                       {entry.user.firstName[0]}{entry.user.lastName[0]}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {entry.user.firstName} {entry.user.lastName}
-                      </p>
+                      <p className="text-sm font-medium truncate">{entry.user.firstName} {entry.user.lastName}</p>
                       <p className="text-xs text-surface-500 truncate">
                         {entry.customer?.name || 'Kein Kunde'}
                         {entry.project && ` — ${entry.project.name}`}
                       </p>
                     </div>
-                    <span className={clsx('badge', `badge-${entry.entryType.toLowerCase()}`)}>
-                      {typeLabel(entry.entryType)}
-                    </span>
+                    <span className={clsx('badge', `badge-${entry.entryType.toLowerCase()}`)}>{typeLabel(entry.entryType)}</span>
                     <div className="text-right">
                       <LiveTimer startAt={entry.startAt} />
                       <p className="text-xs text-surface-400">seit {formatTime(entry.startAt)}</p>
@@ -176,19 +200,15 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Eingereichte Einträge */}
           <div className="card">
             <div className="px-5 py-4 border-b flex items-center justify-between">
               <h2 className="text-sm font-semibold flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-warning-500" />
-                Offen zur Prüfung
+                <CheckCircle className="h-4 w-4 text-warning-500" /> Offen zur Prüfung
               </h2>
               <span className="badge badge-submitted">{submitted?.length || 0}</span>
             </div>
             {!submitted?.length ? (
-              <div className="px-5 py-10 text-center text-sm text-surface-400">
-                Keine offenen Einträge
-              </div>
+              <div className="px-5 py-10 text-center text-sm text-surface-400">Keine offenen Einträge</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -205,27 +225,18 @@ export default function DashboardPage() {
                   <tbody className="divide-y">
                     {submitted.map((entry) => (
                       <tr key={entry.id} className="hover:bg-surface-50/80 transition-colors">
-                        <td className="px-5 py-3 font-medium">
-                          {entry.user.firstName} {entry.user.lastName}
-                        </td>
-                        <td className="px-5 py-3 text-surface-600">
-                          {new Date(entry.startAt).toLocaleDateString('de-DE')}
-                        </td>
+                        <td className="px-5 py-3 font-medium">{entry.user.firstName} {entry.user.lastName}</td>
+                        <td className="px-5 py-3 text-surface-600">{new Date(entry.startAt).toLocaleDateString('de-DE')}</td>
                         <td className="px-5 py-3 font-mono text-xs">
                           {formatTime(entry.startAt)} — {entry.endAt ? formatTime(entry.endAt) : '--:--'}
                         </td>
                         <td className="px-5 py-3">
-                          <span className={clsx('badge', `badge-${entry.entryType.toLowerCase()}`)}>
-                            {typeLabel(entry.entryType)}
-                          </span>
+                          <span className={clsx('badge', `badge-${entry.entryType.toLowerCase()}`)}>{typeLabel(entry.entryType)}</span>
                         </td>
                         <td className="px-5 py-3 text-surface-600 truncate max-w-[200px]">
-                          {entry.customer?.name || '—'}
-                          {entry.project && ` / ${entry.project.name}`}
+                          {entry.customer?.name || '—'}{entry.project && ` / ${entry.project.name}`}
                         </td>
-                        <td className="px-5 py-3 text-surface-500 truncate max-w-[150px]">
-                          {entry.rapport || '—'}
-                        </td>
+                        <td className="px-5 py-3 text-surface-500 truncate max-w-[150px]">{entry.rapport || '—'}</td>
                       </tr>
                     ))}
                   </tbody>

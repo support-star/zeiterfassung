@@ -97,7 +97,7 @@ export default function TimeEntriesPage() {
   const [editRapportId, setEditRapportId] = useState<string | null>(null);
   const [editRapportText, setEditRapportText] = useState('');
 
-  const { mutate, isLoading: mutating } = useMutation();
+  const { mutate, isLoading: mutating, error: mutateError } = useMutation();
 
   // Daten laden
   const query = new URLSearchParams();
@@ -125,16 +125,20 @@ export default function TimeEntriesPage() {
   // Aktionen
   const handleStart = async (e: FormEvent) => {
     e.preventDefault();
-    await mutate('POST', '/time-entries/start', {
-      customerId: newCustomer || null,
-      projectId: newProject || null,
-      entryType: newType,
-      createdVia: 'WEB',
-      rapport: newRapport || null,
-    });
-    setShowNew(false);
-    setNewRapport('');
-    refetch();
+    try {
+      await mutate('POST', '/time-entries/start', {
+        customerId: newCustomer || null,
+        projectId: newProject || null,
+        entryType: newType,
+        createdVia: 'WEB',
+        rapport: newRapport || null,
+      });
+      setShowNew(false);
+      setNewRapport('');
+      refetch();
+    } catch {
+      // Fehler wird durch useMutation().error angezeigt
+    }
   };
 
   const handleEnd = async (id: string) => {
@@ -216,18 +220,20 @@ export default function TimeEntriesPage() {
           {canManage && (
             <div className="flex gap-1">
               <a
-                href={`/api/exports/payroll.csv?year=${exportYear}&month=${exportMonth}`}
+                href={`/api/export/excel?year=${exportYear}&month=${exportMonth}`}
                 className="btn-secondary btn-sm"
                 target="_blank"
+                rel="noreferrer"
               >
-                <Download className="h-3.5 w-3.5" /> Payroll CSV
+                <Download className="h-3.5 w-3.5" /> Excel
               </a>
               <a
-                href={`/api/exports/billing.csv?year=${exportYear}&month=${exportMonth}`}
+                href={`/api/export/pdf?year=${exportYear}&month=${exportMonth}`}
                 className="btn-secondary btn-sm"
                 target="_blank"
+                rel="noreferrer"
               >
-                <Download className="h-3.5 w-3.5" /> Billing CSV
+                <Download className="h-3.5 w-3.5" /> PDF
               </a>
             </div>
           )}
@@ -241,6 +247,11 @@ export default function TimeEntriesPage() {
       {showNew && (
         <form onSubmit={handleStart} className="card p-5">
           <h3 className="text-sm font-semibold mb-4">Zeiterfassung starten</h3>
+          {mutateError && (
+            <div className="mb-4 rounded-lg bg-danger-50 border border-danger-200 px-3 py-2 text-sm text-danger-700">
+              {mutateError}
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <div>
               <label className="label">Typ</label>

@@ -9,9 +9,10 @@ import {
   UsePipes,
 } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
+import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
-import { CreateProjectDto, UpdateProjectDto } from '@zeiterfassung/shared';
+import { UserRole, CreateProjectDto, UpdateProjectDto } from '@zeiterfassung/shared';
 
 @Controller('projects')
 export class ProjectsController {
@@ -23,12 +24,14 @@ export class ProjectsController {
   }
 
   @Post()
+  @Roles(UserRole.ADMIN, UserRole.DISPO)
   @UsePipes(new ZodValidationPipe(CreateProjectDto))
   create(@Body() body: CreateProjectDto, @CurrentUser() user: JwtPayload) {
     return this.projectsService.create(body, user.sub);
   }
 
   @Patch(':id')
+  @Roles(UserRole.ADMIN, UserRole.DISPO)
   @UsePipes(new ZodValidationPipe(UpdateProjectDto))
   update(
     @Param('id') id: string,

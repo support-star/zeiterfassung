@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { api } from '@/lib/api';
 
 interface DailyEntry {
   date: string;
@@ -32,7 +33,7 @@ interface TeamReport {
   period: string;
   totalUsers: number;
   totalNetHours: number;
-  totalGrossWage?: number;
+  totalGrossWageCents?: number;
   users: MonthlyReport[];
 }
 
@@ -47,15 +48,6 @@ function minutesToTime(minutes: number): string {
   const h = Math.floor(abs / 60);
   const m = abs % 60;
   return `${neg ? '-' : ''}${h}:${m.toString().padStart(2, '0')} h`;
-}
-
-async function apiFetch(path: string) {
-  const token = localStorage.getItem('accessToken') ?? '';
-  const res = await fetch(`/api${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
 }
 
 export const ReportsPage: React.FC = () => {
@@ -75,12 +67,12 @@ export const ReportsPage: React.FC = () => {
     setError(null);
     try {
       const [teamData, pendingData] = await Promise.all([
-        apiFetch(`/reports/team?month=${month}&year=${year}`),
-        apiFetch('/reports/pending'),
+        api.get<TeamReport>(`/reports/team?month=${month}&year=${year}`),
+        api.get<unknown[]>('/reports/pending'),
       ]);
       setReport(teamData);
       setPendingCount(Array.isArray(pendingData) ? pendingData.length : 0);
-    } catch (e: any) {
+    } catch {
       setError('Fehler beim Laden der Berichte.');
     } finally {
       setLoading(false);
@@ -118,6 +110,24 @@ export const ReportsPage: React.FC = () => {
           >
             {years.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
+          <div className="flex gap-1">
+            <a
+              href={`/api/export/excel?month=${month}&year=${year}`}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 transition-colors"
+              target="_blank"
+              rel="noreferrer"
+            >
+              📊 Excel
+            </a>
+            <a
+              href={`/api/export/pdf?month=${month}&year=${year}`}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 transition-colors"
+              target="_blank"
+              rel="noreferrer"
+            >
+              📄 PDF
+            </a>
+          </div>
         </div>
       </div>
 
@@ -156,8 +166,8 @@ export const ReportsPage: React.FC = () => {
               { label: 'Gesamt Netto-Stunden', value: `${report.totalNetHours.toFixed(2)} h`, icon: '⏱' },
               {
                 label: 'Gesamt Brutto-Lohn',
-                value: report.totalGrossWage !== undefined
-                  ? `${report.totalGrossWage.toFixed(2)} €`
+                value: report.totalGrossWageCents !== undefined
+                  ? `${(report.totalGrossWageCents / 100).toFixed(2)} €`
                   : '–',
                 icon: '💶',
               },
@@ -219,6 +229,11 @@ export const ReportsPage: React.FC = () => {
                           {u.statusSummary.APPROVED > 0 && (
                             <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">
                               {u.statusSummary.APPROVED} ✓
+                            </span>
+                          )}
+                          {u.statusSummary.DRAFT > 0 && (
+                            <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">
+                              {u.statusSummary.DRAFT} Entwurf
                             </span>
                           )}
                         </div>

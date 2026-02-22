@@ -8,9 +8,10 @@ import {
   UsePipes,
 } from '@nestjs/common';
 import { CustomersService } from './customers.service';
+import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
-import { CreateCustomerDto, UpdateCustomerDto } from '@zeiterfassung/shared';
+import { UserRole, CreateCustomerDto, UpdateCustomerDto } from '@zeiterfassung/shared';
 
 @Controller('customers')
 export class CustomersController {
@@ -22,12 +23,14 @@ export class CustomersController {
   }
 
   @Post()
+  @Roles(UserRole.ADMIN, UserRole.DISPO)
   @UsePipes(new ZodValidationPipe(CreateCustomerDto))
   create(@Body() body: CreateCustomerDto, @CurrentUser() user: JwtPayload) {
     return this.customersService.create(body, user.sub);
   }
 
   @Patch(':id')
+  @Roles(UserRole.ADMIN, UserRole.DISPO)
   @UsePipes(new ZodValidationPipe(UpdateCustomerDto))
   update(
     @Param('id') id: string,
