@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../common/audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { JwtPayload } from '../common/decorators/current-user.decorator';
 import {
   StartTimeEntryDto,
@@ -24,6 +25,7 @@ export class TimeEntriesService {
   constructor(
     private prisma: PrismaService,
     private audit: AuditService,
+    private notifications: NotificationsService,
   ) {}
 
   // ── Abfrage ───────────────────────────────────────
@@ -285,6 +287,9 @@ export class TimeEntriesService {
       actorUserId: currentUser.sub,
     });
 
+    // Benachrichtigung an Manager
+    this.notifications.onEntrySubmitted({ entryId: id, workerId: currentUser.sub }).catch(() => {});
+
     return updated;
   }
 
@@ -308,6 +313,9 @@ export class TimeEntriesService {
       action: 'APPROVE',
       actorUserId: currentUser.sub,
     });
+
+    // Benachrichtigung an Mitarbeiter
+    this.notifications.onStatusChanged({ entryId: id, oldStatus: 'SUBMITTED', newStatus: 'APPROVED', changedBy: currentUser.sub }).catch(() => {});
 
     return updated;
   }
