@@ -102,7 +102,7 @@ export class ReportsService {
 
   private buildReport(user: any, entries: any[], month: number, year: number): MonthlyReportDto {
     const { from, to } = this.monthRange(month, year);
-    const workingDaysInMonth = eachDayOfInterval({ start: from, end: to }).filter((d) => !isWeekend(d)).length;
+    const workingDaysInMonth = eachDayOfInterval({ start: from, end: to }).filter((d: Date) => !isWeekend(d)).length;
     const uniqueDays = new Set(entries.map((e) => format(e.startAt, 'yyyy-MM-dd')));
     const totalGrossMinutes = entries.reduce((sum, e) => {
       if (!e.endAt) return sum;

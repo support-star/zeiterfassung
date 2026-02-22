@@ -18,7 +18,7 @@ export class AuditService {
         entityId: params.entityId,
         action: params.action as any,
         actorUserId: params.actorUserId,
-        payloadJson: params.payload ?? undefined,
+        payloadJson: params.payload as any ?? undefined,
       },
     });
   }
