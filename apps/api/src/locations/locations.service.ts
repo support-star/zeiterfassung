@@ -1,7 +1,7 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtPayload } from '../common/decorators/current-user.decorator';
-import { UserRole } from '@zeiterfassung/shared';
+import { UserRole, LogLocationDto } from '@zeiterfassung/shared';
 
 @Injectable()
 export class LocationsService {
