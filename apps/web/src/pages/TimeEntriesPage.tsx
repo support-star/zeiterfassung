@@ -73,12 +73,6 @@ export default function TimeEntriesPage() {
   const isWorker = user?.role === 'WORKER';
   const canManage = user?.role === 'ADMIN' || user?.role === 'DISPO';
 
-  // GPS Tracking — sendet Standort alle 10 Min wenn ein Entry läuft
-  const runningEntry = entries?.find(e => !e.endAt && e.userId === user?.id) ?? null;
-  useGpsTracker({
-    activeTimeEntryId: runningEntry?.id ?? null,
-  });
-
   // Filter-State
   const [from, setFrom] = useState(() => {
     const d = new Date();
@@ -124,6 +118,10 @@ export default function TimeEntriesPage() {
   const { data: users } = useQuery<{ id: string; firstName: string; lastName: string }[]>(
     canManage ? '/users' : null,
   );
+
+  // GPS Tracking — sendet Standort alle 10 Min wenn ein Entry läuft
+  const runningEntry = entries?.find(e => !e.endAt && e.userId === user?.id) ?? null;
+  useGpsTracker({ activeTimeEntryId: runningEntry?.id ?? null });
 
   const filteredProjects = allProjects?.filter(
     (p) => !newCustomer || p.customerId === newCustomer,

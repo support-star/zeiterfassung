@@ -2,7 +2,6 @@ import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtPayload } from '../common/decorators/current-user.decorator';
 import { UserRole } from '@zeiterfassung/shared';
-import { LogLocationDto, LocationQueryDto } from '@zeiterfassung/shared';
 
 @Injectable()
 export class LocationsService {
@@ -43,7 +42,7 @@ export class LocationsService {
   /**
    * Admin/Dispo: alle Positionen abfragen (mit Filtern).
    */
-  async findAll(query: LocationQueryDto, currentUser: JwtPayload) {
+  async findAll(query: { userId?: string; timeEntryId?: string; from?: string; to?: string; limit?: number }, currentUser: JwtPayload) {
     const isManager = [UserRole.ADMIN, UserRole.DISPO].includes(currentUser.role as UserRole);
 
     const where: any = {};

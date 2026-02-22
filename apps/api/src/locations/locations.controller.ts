@@ -5,7 +5,7 @@ import { LocationsService } from './locations.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
-import { UserRole, LogLocationDto, LocationQueryDto } from '@zeiterfassung/shared';
+import { UserRole, LogLocationDto } from '@zeiterfassung/shared';
 
 @Controller('locations')
 export class LocationsController {
@@ -22,10 +22,17 @@ export class LocationsController {
   @Get()
   @Roles(UserRole.ADMIN, UserRole.DISPO)
   findAll(
-    @Query(new ZodValidationPipe(LocationQueryDto)) query: LocationQueryDto,
-    @CurrentUser() user: JwtPayload,
+    @Query('userId') userId?: string,
+    @Query('timeEntryId') timeEntryId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('limit') limit?: string,
+    @CurrentUser() user?: JwtPayload,
   ) {
-    return this.locationsService.findAll(query, user);
+    return this.locationsService.findAll(
+      { userId, timeEntryId, from, to, limit: limit ? parseInt(limit) : 200 },
+      user!,
+    );
   }
 
   /** Letzter Standort aller aktiven Mitarbeiter (Live-Map) */

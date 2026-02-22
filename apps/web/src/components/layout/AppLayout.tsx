@@ -10,7 +10,6 @@ import {
   Users,
   LogOut,
   Menu,
-  X,
   Smartphone,
   MapPin,
   BarChart2,
@@ -20,7 +19,7 @@ import clsx from 'clsx';
 import { NotificationBell } from '@/components/NotificationBell';
 
 const navItems = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'DISPO'] },
+  { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'DISPO', 'WORKER'] },
   { path: '/time-entries', label: 'Zeiterfassung', icon: Clock, roles: ['ADMIN', 'DISPO', 'WORKER'] },
   { path: '/customers', label: 'Kunden', icon: Building2, roles: ['ADMIN', 'DISPO'] },
   { path: '/projects', label: 'Projekte', icon: FolderKanban, roles: ['ADMIN', 'DISPO'] },

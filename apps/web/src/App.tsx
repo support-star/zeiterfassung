@@ -39,8 +39,7 @@ function RequireMobileAuth({ children }: { children: React.ReactNode }) {
 }
 
 function WorkerRedirect() {
-  const { user } = useAuth();
-  if (user?.role === 'WORKER') return <Navigate to="/time-entries" replace />;
+  // Dashboard zeigt automatisch rollenbasierte Ansicht
   return <DashboardPage />;
 }
 
